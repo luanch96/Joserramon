@@ -1,0 +1,131 @@
+Pasos para probar el proyecto
+1. Configurar el archivo /etc/hosts
+Agrega tu dominio al archivo hosts para que el navegador lo reconozca:
+
+sudo bash -c 'echo "127.0.0.1 $(whoami).42.fr" >> /etc/hosts'
+
+
+
+O edita manualmente /etc/hosts y añade:
+
+127.0.0.1 jrc.42.fr
+
+(Reemplaza jrc por tu nombre de usuario si es diferente
+
+2. Preparar el entorno (primera vez)
+Ejecuta el setup para crear los directorios y generar los certificados SSL:
+
+cd /home/jrc/Escritorio/luisINCPTFINALFINAL-main
+sudo make setup
+
+Esto creará:
+Directorios de datos en ~/data/mariadb, ~/data/wordpress, ~/data/ssl
+Certificados SSL para tu dominio
+3. Construir e iniciar los contenedores
+
+make run
+
+O por pasos:
+make build    # Construir las imágenes
+make up       # Iniciar los contenedores
+
+
+4. Verificar que todo funciona
+make info     # Ver estado de los contenedores
+
+También puedes verificar manualmente:
+docker ps                    # Ver contenedores en ejecución
+docker-compose -f srcs/docker-compose.yml ps
+
+5. Acceder a WordPress
+Abre tu navegador y ve a:
+https://jrc.42.fr
+
+(Reemplaza jrc por tu nombre de usuario)
+Nota: Como el certificado es autofirmado, el navegador mostrará una advertencia de seguridad. En desarrollo puedes hacer clic en "Avanzado" → "Continuar" o agregar una excepción.
+
+6. Comandos útiles
+make down          # Detener los contenedores
+make restart       # Reiniciar los contenedores
+make clean         # Limpiar contenedores e imágenes
+make fclean        # Limpieza completa (incluye datos)
+
+
+7. Ver logs (si algo falla)
+docker-compose -f srcs/docker-compose.yml logs
+docker-compose -f srcs/docker-compose.yml logs wordpress
+docker-compose -f srcs/docker-compose.yml logs mariadb
+docker-compose -f srcs/docker-compose.yml logs nginx
+
+
+8. Si necesitas cambiar el dominio
+Si quieres usar un dominio diferente al automático (usuario.42.fr):
+DOMAIN_NAME=mi-dominio.42.fr make setup
+DOMAIN_NAME=mi-dominio.42.fr make run
+Y recuerda agregarlo también a /etc/hosts.
+
+Resumen rápido
+
+# 1. Configurar hosts
+sudo bash -c 'echo "127.0.0.1 $(whoami).42.fr" >> /etc/hosts'
+
+# 2. Setup inicial (solo primera vez)
+cd /home/jrc/Escritorio/luisINCPTFINALFINAL-main
+make setup
+
+# 3. Iniciar proyecto
+make run
+
+# 4. Acceder en el navegador
+# https://jrc.42.fr (o tu-usuario.42.fr)
+
+
+¿Necesitas ayuda con algún paso específico o quieres que revise algo antes de ejecutarlo?
+jrc@jrc-GF65-Thin-10SDR:~/Escritorio/luisINCPTFINALFINAL-main$ sudo make setup
+📁 Creando directorios para volúmenes...
+📍 Usuario: root
+🏠 HOME: /root
+🌐 Dominio: root.42.fr
+🔐 Generando certificados SSL para root.42.fr...
+DOMAIN_NAME=root.42.fr SSL_DIR=/root/data/ssl ./srcs/requirements/nginx/tools/generate-ssl.sh
+/bin/sh: 1: ./srcs/requirements/nginx/tools/generate-ssl.sh: Permission denied
+make: *** [Makefile:71: setup] Error 126
+
+Al ejecutar sudo make setup, el usuario pasa a ser root. Corrigiendo esto y añadiendo permisos de ejecución al script:
+-rwxr-xr-x 1 jrc jrc 597 Nov  2 20:32 srcs/requirements/nginx/tools/generate-ssl.sh
+Corrigiendo la detección de usuario con sudo y la ejecución del script. Ajustando el Makefile:
+Corregido: el Makefile ahora detecta el usuario correcto incluso con sudo y ejecuta el script de forma adecuada. Cambios realizados:
+Detección del usuario real: usa SUDO_USER cuando se ejecuta con sudo
+Ejecución del script: usa bash -c para evitar problemas de permisos
+Propietarios: los archivos creados pertenecen al usuario correcto
+Vuelve a ejecutar:
+Debería:
+Detectar que eres jrc (no root)
+Usar el HOME de jrc (/home/jrc, no /root)
+Crear los directorios con los permisos correctos
+Generar los certificados SSL correctamente
+Nota importante: Aunque puedes usar sudo make setup para crear los directorios (ya que puede requerir permisos especiales), para el resto de comandos (make build, make up, make run) es mejor ejecutarlos sin sudo, ya que Docker normalmente funciona sin sudo si el usuario está en el grupo docker.
+Después de sudo make setup, ejecuta:
+Sin sudo, debería funcionar correctamente.
+
+COMANDOS UTILES PARA EL FUTURO
+
+# Ver estado
+make info
+
+# Detener servicios
+make down
+
+# Reiniciar servicios
+make restart
+
+# Limpiar todo (contenedores e imágenes)
+make clean
+
+# Limpieza completa (incluye datos)
+make fclean
+
+# Ver logs
+docker-compose -f srcs/docker-compose.yml logs
+docker-compose -f srcs/docker-compose.yml logs wordpress
+docker-compose -f srcs/docker-compose.yml logs nginx
