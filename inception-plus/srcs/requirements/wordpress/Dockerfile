@@ -16,7 +16,13 @@ RUN apt-get update && apt-get install -y \
     unzip \
     gettext-base \
     mariadb-client \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Instalar wp-cli
+RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+    && chmod +x wp-cli.phar \
+    && mv wp-cli.phar /usr/local/bin/wp
 
 RUN mkdir -p /var/www/wordpress
 
@@ -39,14 +45,8 @@ EXPOSE 9000
 
 RUN sed -i 's/;daemonize = yes/daemonize = no/' /etc/php/8.2/fpm/php-fpm.conf
 
-# Crear script de inicio que genera wp-config.php desde el template
-RUN echo '#!/bin/bash' > /usr/local/bin/docker-entrypoint.sh && \
-    echo 'set -e' >> /usr/local/bin/docker-entrypoint.sh && \
-    echo 'if [ ! -f /var/www/wordpress/wp-config.php ]; then' >> /usr/local/bin/docker-entrypoint.sh && \
-    echo '  envsubst '"'"'$$DOMAIN_NAME'"'"' < /tmp/wp-config.php.template > /var/www/wordpress/wp-config.php' >> /usr/local/bin/docker-entrypoint.sh && \
-    echo '  chown www-data:www-data /var/www/wordpress/wp-config.php' >> /usr/local/bin/docker-entrypoint.sh && \
-    echo 'fi' >> /usr/local/bin/docker-entrypoint.sh && \
-    echo 'exec php-fpm8.2 -F' >> /usr/local/bin/docker-entrypoint.sh && \
-    chmod +x /usr/local/bin/docker-entrypoint.sh
+# Copiar el entrypoint script
+COPY tools/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 CMD ["/usr/local/bin/docker-entrypoint.sh"]
